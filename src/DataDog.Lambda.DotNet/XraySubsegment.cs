@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace DataDog.Lambda.DotNet
 {
-    class XraySubsegment
+    public class XraySubsegment
     {
         //{
         //  "start_time": 1500000000,
@@ -98,7 +98,7 @@ namespace DataDog.Lambda.DotNet
                 return this;
             }
 
-            public XraySubsegmentBuilder dDdParentId(string parentId)
+            public XraySubsegmentBuilder DdParentId(string parentId)
             {
                 _xrs.Metadata.Datadog.Trace.ParentId = parentId;
                 return this;
@@ -136,7 +136,7 @@ namespace DataDog.Lambda.DotNet
         public string Type { get; set; }
     }
 
-    class MetadataDatadogTrace
+    public class MetadataDatadogTrace
     {
         [JsonPropertyName("trace-id")]
         public string TraceId { get; set; }
@@ -148,13 +148,13 @@ namespace DataDog.Lambda.DotNet
         public string ParentId { get; set; }
     }
 
-    class MetadataDatadog
+    public class MetadataDatadog
     {
         [JsonPropertyName("trace")]
         public MetadataDatadogTrace Trace { get; set; }
     }
 
-    class MetadataCl
+    public class MetadataCl
     {
         [JsonPropertyName("datadog")]
         public MetadataDatadog Datadog { get; set; }
