@@ -18,7 +18,7 @@ namespace DataDog.Lambda.DotNet
             {
                 if (context == null)
                 {
-                    DDLogger.GetLoggerImpl().Debug("Unable to determine cold_start: context was null");
+                    DDLogger.GetLoggerImpl(context.Logger).Debug("Unable to determine cold_start: context was null");
                     return false;
                 }
                 string reqId = context.AwsRequestId;

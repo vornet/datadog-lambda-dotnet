@@ -8,12 +8,12 @@ namespace DataDog.Lambda.DotNet
 {
     public class EnhancedMetric
     {
-        public static Dictionary<string, object> MakeTagsFromContext(ILambdaContext ctx)
+        public static Dictionary<string, object> MakeTagsFromContext(ILambdaContext context)
         {
-            Dictionary<string, object> m = new Dictionary<string, object>();
-            if (ctx != null)
+            Dictionary<string, object> tags = new Dictionary<string, object>();
+            if (context != null && context.InvokedFunctionArn != null)
             {
-                string[] arnParts = ctx.InvokedFunctionArn.Split(':');
+                string[] arnParts = context.InvokedFunctionArn.Split(':');
                 string region = "";
                 string accountId = "";
                 string alias = "";
@@ -32,28 +32,28 @@ namespace DataDog.Lambda.DotNet
                     }
                     else if (!alias.All(char.IsNumber))
                     {
-                        m.Add("executedversion", ctx.FunctionVersion);
+                        tags.Add("executedversion", context.FunctionVersion);
                     }
-                    m.Add("resource", ctx.FunctionName + ":" + alias);
+                    tags.Add("resource", context.FunctionName + ":" + alias);
                 }
                 else
                 {
-                    m.Add("resource", ctx.FunctionName);
+                    tags.Add("resource", context.FunctionName);
                 }
-                m.Add("functionname", ctx.FunctionName);
-                m.Add("region", region);
-                m.Add("account_id", accountId);
-                m.Add("memorysize", ctx.MemoryLimitInMB);
-                m.Add("cold_start", ColdStart.GetColdStart(ctx));
-                m.Add("datadog_lambda", Assembly.GetEntryAssembly().GetName().Version);
+                tags.Add("functionname", context.FunctionName);
+                tags.Add("region", region);
+                tags.Add("account_id", accountId);
+                tags.Add("memorysize", context.MemoryLimitInMB);
+                tags.Add("cold_start", ColdStart.GetColdStart(context));
+                tags.Add("datadog_lambda", Assembly.GetEntryAssembly().GetName().Version);
             }
             else
             {
-                DDLogger.GetLoggerImpl().Debug("Unable to enhance metrics: context was null.");
+                DDLogger.GetLoggerImpl(context.Logger).Debug("Unable to enhance metrics: context was null.");
             }
             string runtime = ".NET " + Environment.Version;
-            m.Add("runtime", runtime);
-            return m;
+            tags.Add("runtime", runtime);
+            return tags;
         }
     }
 }

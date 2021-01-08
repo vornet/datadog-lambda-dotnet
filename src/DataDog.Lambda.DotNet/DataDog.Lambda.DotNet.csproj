@@ -2,6 +2,16 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageId>Vornet.DataDog.Lambda.DotNet</PackageId>
+    <Version>1.0.0-test3</Version>
+    <Authors>Vorn Mom</Authors>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageTags>aws-lambda;datadog</PackageTags>
+    <PackageDescription>
+      An unofficial DataDog Lambda client, ported from the official Java version: https://github.com/DataDog/datadog-lambda-java    
+    </PackageDescription>
+    <RepositoryUrl>https://github.com/vornet/datadog-lambda-dotnet</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>

@@ -13,6 +13,7 @@ namespace DataDog.Lambda.DotNet
         public const string Invocation = "invocations";
         private const string ErrorName = "errors";
 
+        private ILambdaContext _context;
         private Tracing _tracing;
         private bool _enhanced = true;
 
@@ -22,7 +23,8 @@ namespace DataDog.Lambda.DotNet
         /// <param name="context">Enhanced Metrics pulls information from the Lambda context.</param>
         public DDLambda(ILambdaContext context)
         {
-            _tracing = new Tracing();
+            _context = context;
+            _tracing = new Tracing(context.Logger);
             _enhanced = CheckEnhanced();
             RecordEnhanced(Invocation, context);
         }
@@ -30,26 +32,28 @@ namespace DataDog.Lambda.DotNet
         /// <summary>
         /// Testing only: create a DDLambda instrumenter with a given context and xrayTraceInfo
         /// </summary>
-        /// <param name="cxt">Enhanced Metrics pulls information from the Lambda context.</param>
+        /// <param name="context">Enhanced Metrics pulls information from the Lambda context.</param>
         /// <param name="xrayTraceInfo">This would normally be the contents of the "_X_AMZN_TRACE_ID" env var</param>
-        public DDLambda(ILambdaContext cxt, string xrayTraceInfo)
+        public DDLambda(ILambdaContext context, string xrayTraceInfo)
         {
-            _tracing = new Tracing(xrayTraceInfo);
+            _context = context;
+            _tracing = new Tracing(context.Logger, xrayTraceInfo);
             _enhanced = CheckEnhanced();
-            RecordEnhanced(Invocation, cxt);
+            RecordEnhanced(Invocation, context);
         }
 
         /// <summary>
         /// Create a trace-enabled DDLambda instrumenter given an APIGatewayProxyRequestEvent and a Lambda context         
         /// </summary>
         /// <param name="req">Your Datadog trace headers are pulled from the request and sent to XRay for consumption by the Datadog Xray Crawler</param>
-        /// <param name="cxt">Enhanced Metrics pulls information from the Lambda context.</param>
-        public DDLambda(APIGatewayProxyRequest req, ILambdaContext cxt)
+        /// <param name="context">Enhanced Metrics pulls information from the Lambda context.</param>
+        public DDLambda(APIGatewayProxyRequest req, ILambdaContext context)
         {
+            _context = context;
             _enhanced = CheckEnhanced();
-            RecordEnhanced(Invocation, cxt);
-            _tracing = new Tracing(req);
-            _tracing.SubmitSegment();
+            RecordEnhanced(Invocation, context);
+            _tracing = new Tracing(context.Logger, req);
+            _tracing.SubmitSegment(context.Logger);
         }
 
         
@@ -58,13 +62,14 @@ namespace DataDog.Lambda.DotNet
         /// <remarks>Please note that your custom request object MUST implement Headerable.</remarks>
         /// </summary>
         /// <param name="req">A custom request object that implements Headerable. Datadog trace headers are pulled from this request object.</param>
-        /// <param name="cxt">Enhanced Metrics pulls information from the Lambda context.</param>
-        public DDLambda(IHeaderable req, ILambdaContext cxt)
+        /// <param name="context">Enhanced Metrics pulls information from the Lambda context.</param>
+        public DDLambda(IHeaderable req, ILambdaContext context)
         {
+            _context = context;
             _enhanced = CheckEnhanced();
-            RecordEnhanced(Invocation, cxt);
-            _tracing = new Tracing(req);
-            _tracing.SubmitSegment();
+            RecordEnhanced(Invocation, context);
+            _tracing = new Tracing(context.Logger, req);
+            _tracing.SubmitSegment(context.Logger);
         }
 
         protected bool CheckEnhanced()
@@ -135,7 +140,7 @@ namespace DataDog.Lambda.DotNet
         {
             if (_tracing == null)
             {
-                DDLogger.GetLoggerImpl().Error("Unable to add trace headers from an untraceable request. Did you pass LambdaInstrumenter a request?");
+                DDLogger.GetLoggerImpl(_context.Logger).Error("Unable to add trace headers from an untraceable request. Did you pass LambdaInstrumenter a request?");
                 return;
             }
 
@@ -153,7 +158,7 @@ namespace DataDog.Lambda.DotNet
         {
             if (_tracing == null)
             {
-                DDLogger.GetLoggerImpl().Error("Unable to add trace headers from an untraceable request. Did you pass LambdaInstrumenter a request?");
+                DDLogger.GetLoggerImpl(_context.Logger).Error("Unable to add trace headers from an untraceable request. Did you pass LambdaInstrumenter a request?");
                 return;
             }
 
@@ -173,7 +178,7 @@ namespace DataDog.Lambda.DotNet
         {
             if (_tracing == null)
             {
-                DDLogger.GetLoggerImpl().Debug("No tracing context; unable to get Trace ID");
+                DDLogger.GetLoggerImpl(_context.Logger).Debug("No tracing context; unable to get Trace ID");
                 return null;
             }
             return _tracing.GetLogCorrelationTraceAndSpanIDsMap();
@@ -188,7 +193,7 @@ namespace DataDog.Lambda.DotNet
             Dictionary<string, string> traceInfo = GetTraceContext();
             if (traceInfo == null)
             {
-                DDLogger.GetLoggerImpl().Debug("No Trace/Log correlation IDs returned");
+                DDLogger.GetLoggerImpl(_context.Logger).Debug("No Trace/Log correlation IDs returned");
                 return "";
             }
 

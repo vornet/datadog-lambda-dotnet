@@ -1,4 +1,5 @@
 using Amazon.Lambda.APIGatewayEvents;
+using Amazon.Lambda.Core;
 using DataDog.Lambda.DotNet;
 using System;
 using System.Collections.Generic;
@@ -18,42 +19,46 @@ namespace DataDog.Lambda.DotNet
         public const string TraceIdKey = "dd.trace_id";
         public const string SpanIdKey = "dd.span_id";
 
-        protected DDTraceContext _context;
+        private ILambdaLogger _logger;
+        protected DDTraceContext _traceContext;
         protected XRayTraceContext _xrayContext;
 
-        public Tracing()
+        public Tracing(ILambdaLogger logger)
         {
-            _xrayContext = new XRayTraceContext();
+            _logger = logger;
+            _xrayContext = new XRayTraceContext(logger);
         }
 
-        public Tracing(APIGatewayProxyRequest req)
+        public Tracing(ILambdaLogger logger, APIGatewayProxyRequest req)
         {
-            _context = PopulateDDContext(req.Headers);
-            _xrayContext = new XRayTraceContext();
+            _logger = logger;
+            _traceContext = PopulateDDContext(logger, req.Headers);
+            _xrayContext = new XRayTraceContext(logger);
         }
 
-        public Tracing(IHeaderable req)
+        public Tracing(ILambdaLogger logger, IHeaderable req)
         {
-            _context = PopulateDDContext(req.GetHeaders());
-            _xrayContext = new XRayTraceContext();
+            _traceContext = PopulateDDContext(logger, req.GetHeaders());
+            _xrayContext = new XRayTraceContext(logger);
         }
 
         /// <summary>
         /// Test constructor that can take a dummy _X_AMZN_TRACE_ID value
         /// </summary>
         /// <param name="xrayTraceInfo"></param>
-        public Tracing(string xrayTraceInfo)
+        public Tracing(ILambdaLogger logger, string xrayTraceInfo)
         {
+            _logger = logger;
             _xrayContext = new XRayTraceContext(xrayTraceInfo);
         }
 
-        public DDTraceContext DDContext {
+        public DDTraceContext TraceContext {
             get {
-                if (_context == null)
+                if (_traceContext == null)
                 {
                     return new DDTraceContext();
                 }
-                return _context;
+                return _traceContext;
             }
         }
 
@@ -61,7 +66,7 @@ namespace DataDog.Lambda.DotNet
             get {
                 if (_xrayContext == null)
                 {
-                    return new XRayTraceContext();
+                    return new XRayTraceContext(_logger);
                 }
                 return _xrayContext;
             }
@@ -69,10 +74,10 @@ namespace DataDog.Lambda.DotNet
 
         public Dictionary<string, string> GetLogCorrelationTraceAndSpanIDsMap()
         {
-            if (_context != null)
+            if (_traceContext != null)
             {
-                string traceID = _context.TraceId;
-                string spanID = _context.ParentId;
+                string traceID = _traceContext.TraceId;
+                string spanID = _traceContext.ParentId;
                 Dictionary<string, string> logMap = new Dictionary<string, string>();
                 logMap.Add(TraceIdKey, traceID);
                 logMap.Add(SpanIdKey, spanID);
@@ -87,7 +92,7 @@ namespace DataDog.Lambda.DotNet
                 logMap.Add(SpanIdKey, spanID);
                 return logMap;
             }
-            DDLogger.GetLoggerImpl().Debug("No DD trace context or XRay trace context set!");
+            DDLogger.GetLoggerImpl(_logger).Debug("No DD trace context or XRay trace context set!");
             return null;
         }
 
@@ -96,30 +101,30 @@ namespace DataDog.Lambda.DotNet
             return $"[dd.trace_id={trace} dd.span_id={span}";
         }
 
-        private static DDTraceContext PopulateDDContext(IDictionary<string, string> headers)
+        private static DDTraceContext PopulateDDContext(ILambdaLogger logger, IDictionary<string, string> headers)
         {
             DDTraceContext ctx = null;
             try
             {
-                ctx = new DDTraceContext(headers);
+                ctx = new DDTraceContext(logger, headers);
             }
-            catch (Exception e)
+            catch
             {
-                DDLogger.GetLoggerImpl().Debug("Unable to extract DD Trace Context from event headers");
+                DDLogger.GetLoggerImpl(logger).Debug("Unable to extract DD Trace Context from event headers");
             }
             return ctx;
         }
 
-        public Task<bool> SubmitSegment()
+        public Task<bool> SubmitSegment(ILambdaLogger logger)
         {
-            if (_context == null)
+            if (_traceContext == null)
             {
-                DDLogger.GetLoggerImpl().Debug("Cannot submit a fake span on a null context. Is the DD tracing context being initialized correctly?");
+                DDLogger.GetLoggerImpl(logger).Debug("Cannot submit a fake span on a null context. Is the DD tracing context being initialized correctly?");
                 return Task.FromResult(false);
             }
 
-            ConverterSubsegment es = new ConverterSubsegment(_context, _xrayContext);
-            return es.SendToXRayAsync();
+            ConverterSubsegment es = new ConverterSubsegment(_traceContext, _xrayContext);
+            return es.SendToXRayAsync(logger);
         }
 
         public Dictionary<string, string> MakeOutboundHttpTraceHeaders()
@@ -131,18 +136,18 @@ namespace DataDog.Lambda.DotNet
             {
                 apmParent = _xrayContext.ApmParentId;
             }
-            if (_context == null
-                    || _context == null
-                    || _context.TraceId == null
-                    || _context.SamplingPriority == null
+            if (_traceContext == null
+                    || _traceContext == null
+                    || _traceContext.TraceId == null
+                    || _traceContext.SamplingPriority == null
                     || apmParent == null)
             {
-                DDLogger.GetLoggerImpl().Debug("Cannot make outbound trace headers -- some required fields are null");
+                DDLogger.GetLoggerImpl(_logger).Debug("Cannot make outbound trace headers -- some required fields are null");
                 return traceHeaders;
             }
 
-            traceHeaders.Add(DDTraceContext.DdTraceKey, _context.TraceId);
-            traceHeaders.Add(DDTraceContext.DdSamplingKey, _context.SamplingPriority);
+            traceHeaders.Add(DDTraceContext.DdTraceKey, _traceContext.TraceId);
+            traceHeaders.Add(DDTraceContext.DdSamplingKey, _traceContext.SamplingPriority);
             traceHeaders.Add(DDTraceContext.DdParentKey, _xrayContext.ApmParentId);
 
             return traceHeaders;
@@ -168,11 +173,14 @@ namespace DataDog.Lambda.DotNet
         public string Type { get; set; }
 
         private static Random random = new Random();
-        private DDTraceContext _context;
+        private DDTraceContext _traceContext;
         private XRayTraceContext _xrayContext;
 
-        public ConverterSubsegment(DDTraceContext ctx, XRayTraceContext xrt)
+        public ConverterSubsegment(DDTraceContext traceContext, XRayTraceContext xrayContext)
         {
+            _traceContext = traceContext;
+            _xrayContext = xrayContext;
+
             StartTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             Name = "datadog-metadata";
             Type = "subsegment";
@@ -202,15 +210,15 @@ namespace DataDog.Lambda.DotNet
                     .Type(Type)
                     .ParentId(_xrayContext.ParentId)
                     .TraceId(_xrayContext.TraceId)
-                    .DdTraceId(_context.TraceId)
-                    .DdSamplingPriority(_context.SamplingPriority)
-                    .DdParentId(_context.ParentId)
+                    .DdTraceId(_traceContext.TraceId)
+                    .DdSamplingPriority(_traceContext.SamplingPriority)
+                    .DdParentId(_traceContext.ParentId)
                     .Build();
 
             return JsonSerializer.Serialize(xrs);
         }
 
-        public async Task<bool> SendToXRayAsync()
+        public async Task<bool> SendToXRayAsync(ILambdaLogger logger)
         {
             if (string.IsNullOrEmpty(Id))
             {
@@ -224,17 +232,17 @@ namespace DataDog.Lambda.DotNet
             {
                 if (daemonAddress.Split(':').Length != 2)
                 {
-                    DDLogger.GetLoggerImpl().Error("Unexpected AWS_XRAY_DAEMON_ADDRESS value: ", daemonAddress);
+                    DDLogger.GetLoggerImpl(logger).Error("Unexpected AWS_XRAY_DAEMON_ADDRESS value: ", daemonAddress);
                     return false;
                 }
                 daemonIpString = daemonAddress.Split(':')[0];
                 daemonPortString = daemonAddress.Split(':')[1];
-                DDLogger.GetLoggerImpl().Debug("AWS XRay Address: ", daemonIpString);
-                DDLogger.GetLoggerImpl().Debug("AWS XRay Port: ", daemonPortString);
+                DDLogger.GetLoggerImpl(logger).Debug("AWS XRay Address: ", daemonIpString);
+                DDLogger.GetLoggerImpl(logger).Debug("AWS XRay Port: ", daemonPortString);
             }
             else
             {
-                DDLogger.GetLoggerImpl().Error("Unable to get AWS_XRAY_DAEMON_ADDRESS from environment vars");
+                DDLogger.GetLoggerImpl(logger).Error("Unable to get AWS_XRAY_DAEMON_ADDRESS from environment vars");
                 return false;
             }
 
@@ -249,7 +257,7 @@ namespace DataDog.Lambda.DotNet
             }
             else
             {
-                DDLogger.GetLoggerImpl().Error("Unexpected exception looking up the AWS_XRAY_DAEMON_ADDRESS. This address should be a dotted quad and not require host resolution.");
+                DDLogger.GetLoggerImpl(logger).Error("Unexpected exception looking up the AWS_XRAY_DAEMON_ADDRESS. This address should be a dotted quad and not require host resolution.");
                 return false;
             }
 
@@ -260,7 +268,7 @@ namespace DataDog.Lambda.DotNet
             }
             catch (FormatException ex)
             {
-                DDLogger.GetLoggerImpl().Error("Excepting parsing daemon port" + ex.Message);
+                DDLogger.GetLoggerImpl(logger).Error("Excepting parsing daemon port" + ex.Message);
                 return false;
             }
 
@@ -280,7 +288,7 @@ namespace DataDog.Lambda.DotNet
             }
             catch (SocketException e)
             {
-                DDLogger.GetLoggerImpl().Error("Unable to bind to an available socket! " + e.Message);
+                DDLogger.GetLoggerImpl(logger).Error("Unable to bind to an available socket! " + e.Message);
                 return false;
             }
             try
@@ -289,7 +297,7 @@ namespace DataDog.Lambda.DotNet
             }
             catch (IOException e)
             {
-                DDLogger.GetLoggerImpl().Error("Couldn't send packet! " + e.Message);
+                DDLogger.GetLoggerImpl(logger).Error("Couldn't send packet! " + e.Message);
                 return false;
             }
             return true;
@@ -313,32 +321,32 @@ namespace DataDog.Lambda.DotNet
         {
         }
 
-        public DDTraceContext(IDictionary<string, string> headers)
+        public DDTraceContext(ILambdaLogger logger, IDictionary<string, string> headers)
         {
             if (headers == null)
             {
-                DDLogger.GetLoggerImpl().Debug("Unable to extract DD Context from null headers");
+                DDLogger.GetLoggerImpl(logger).Debug("Unable to extract DD Context from null headers");
                 throw new Exception("null headers!");
             }
             headers = ToLowerKeys(headers);
 
             if (!headers.ContainsKey(DdTraceKey))
             {
-                DDLogger.GetLoggerImpl().Debug("Headers missing the DD Trace ID");
+                DDLogger.GetLoggerImpl(logger).Debug("Headers missing the DD Trace ID");
                 throw new Exception("No trace ID");
             }
             TraceId = headers[DdTraceKey];
 
             if (!headers.ContainsKey(DdParentKey))
             {
-                DDLogger.GetLoggerImpl().Debug("Headers missing the DD Parent ID");
+                DDLogger.GetLoggerImpl(logger).Debug("Headers missing the DD Parent ID");
                 throw new Exception("Missing Parent ID");
             }
             ParentId = headers[DdParentKey];
 
             if (!headers.ContainsKey(DdSamplingKey))
             {
-                DDLogger.GetLoggerImpl().Debug("Headers missing the DD Sampling Priority. Defaulting to '2'");
+                DDLogger.GetLoggerImpl(logger).Debug("Headers missing the DD Sampling Priority. Defaulting to '2'");
                 headers.Add(DdSamplingKey, "2");
             }
             SamplingPriority = headers[DdSamplingKey];
@@ -399,20 +407,24 @@ namespace DataDog.Lambda.DotNet
         [JsonPropertyName("parentId")]
         public string ParentId { get; set; }
 
-        public XRayTraceContext()
+        private ILambdaLogger _logger;
+
+        public XRayTraceContext(ILambdaLogger logger)
         {
+            _logger = logger;
+
             //Root=1-5e41a79d-e6a0db584029dba86a594b7e;Parent=8c34f5ad8f92d510;Sampled=1
             string traceId = Environment.GetEnvironmentVariable("_X_AMZN_TRACE_ID");
             if (string.IsNullOrEmpty(traceId))
             {
-                DDLogger.GetLoggerImpl().Debug("Unable to find _X_AMZN_TRACE_ID");
+                DDLogger.GetLoggerImpl(logger).Debug("Unable to find _X_AMZN_TRACE_ID");
                 return;
             }
 
             string[] traceParts = traceId.Split(';');
             if (traceParts.Length != 3)
             {
-                DDLogger.GetLoggerImpl().Error("Malformed _X_AMZN_TRACE_ID value: " + traceId);
+                DDLogger.GetLoggerImpl(logger).Error("Malformed _X_AMZN_TRACE_ID value: " + traceId);
                 return;
             }
 
@@ -423,7 +435,7 @@ namespace DataDog.Lambda.DotNet
             }
             catch
             {
-                DDLogger.GetLoggerImpl().Error("Malformed _X_AMZN_TRACE_ID value: " + traceId);
+                DDLogger.GetLoggerImpl(logger).Error("Malformed _X_AMZN_TRACE_ID value: " + traceId);
                 return;
             }
             TraceIdHeader = traceId;
@@ -438,7 +450,7 @@ namespace DataDog.Lambda.DotNet
             string[] traceParts = traceId.Split(';');
             if (traceParts.Length != 3)
             {
-                DDLogger.GetLoggerImpl().Error("Malformed _X_AMZN_TRACE_ID value: " + traceId);
+                DDLogger.GetLoggerImpl(_logger).Error("Malformed _X_AMZN_TRACE_ID value: " + traceId);
                 return;
             }
 
@@ -447,9 +459,9 @@ namespace DataDog.Lambda.DotNet
                 TraceId = traceParts[0].Split('=')[1];
                 ParentId = traceParts[1].Split('=')[1];
             }
-            catch (Exception e)
+            catch
             {
-                DDLogger.GetLoggerImpl().Error("Malformed _X_AMZN_TRACE_ID value: " + traceId);
+                DDLogger.GetLoggerImpl(_logger).Error("Malformed _X_AMZN_TRACE_ID value: " + traceId);
                 return;
             }
             TraceIdHeader = traceId;
@@ -476,7 +488,7 @@ namespace DataDog.Lambda.DotNet
                 }
                 catch (Exception e)
                 {
-                    DDLogger.GetLoggerImpl().Debug("Problem converting XRay Parent ID to APM Parent ID: " + e.Message);
+                    DDLogger.GetLoggerImpl(_logger).Debug("Problem converting XRay Parent ID to APM Parent ID: " + e.Message);
                     return null;
                 }
             }
@@ -494,7 +506,7 @@ namespace DataDog.Lambda.DotNet
                 {
                     if (ex is IndexOutOfRangeException || ex is NullReferenceException)
                     {
-                        DDLogger.GetLoggerImpl().Debug("Unexpected format for the trace ID. Unable to parse it. " + TraceId);
+                        DDLogger.GetLoggerImpl(_logger).Debug("Unexpected format for the trace ID. Unable to parse it. " + TraceId);
                         return string.Empty;
                     }
 
@@ -504,7 +516,7 @@ namespace DataDog.Lambda.DotNet
                 //just to verify
                 if (bigId.Length != 24)
                 {
-                    DDLogger.GetLoggerImpl().Debug("Got an unusual traceid from x-ray. Unable to convert that to an APM id. " + TraceId);
+                    DDLogger.GetLoggerImpl(_logger).Debug("Got an unusual traceid from x-ray. Unable to convert that to an APM id. " + TraceId);
                     return "";
                 }
 
@@ -517,7 +529,7 @@ namespace DataDog.Lambda.DotNet
                 }
                 catch (Exception)
                 {
-                    DDLogger.GetLoggerImpl().Debug("Got a NumberFormatException trying to parse the traceID. Unable to convert to an APM id. " + TraceId);
+                    DDLogger.GetLoggerImpl(_logger).Debug("Got a NumberFormatException trying to parse the traceID. Unable to convert to an APM id. " + TraceId);
                     return "";
                 }
                 parsed = parsed & 0x7FFFFFFFFFFFFFFFL; //take care of that pesky first bit...

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
+using Amazon.Lambda.Core;
 
 namespace DataDog.Lambda.DotNet
 {
@@ -14,10 +15,13 @@ namespace DataDog.Lambda.DotNet
         }
 
         private static level? _gLevel;
+        private static ILambdaLogger _lambdaLogger;
         private level _lLevel;
 
-        public static DDLogger GetLoggerImpl()
+        public static DDLogger GetLoggerImpl(ILambdaLogger lambdaLogger)
         {
+            _lambdaLogger = lambdaLogger;
+
             if (_gLevel != null) return new DDLogger();
 
             string env_level = Environment.GetEnvironmentVariable("DD_LOG_LEVEL");
@@ -26,6 +30,10 @@ namespace DataDog.Lambda.DotNet
             if (env_level.ToUpper() == level.DEBUG.ToString())
             {
                 _gLevel = level.DEBUG;
+            }
+            else
+            {
+                _gLevel = level.ERROR;
             }
 
             return new DDLogger();
@@ -66,7 +74,7 @@ namespace DataDog.Lambda.DotNet
             structuredLog.Add("level", l.ToString());
             structuredLog.Add("message", argsSB.ToString());
 
-            Console.WriteLine(JsonSerializer.Serialize(structuredLog));
+            _lambdaLogger.LogLine(JsonSerializer.Serialize(structuredLog));
         }
 
         public void SetLevel(level l)

@@ -4,10 +4,12 @@ namespace DataDog.Lambda.DotNet
 {
     abstract class MetricWriter
     {
+        private static object _lock = new object();
+
         private static MetricWriter _impl;
         public static MetricWriter GetMetricWriterImpl()
         {
-            lock (_impl)
+            lock (_lock)
             {
                 if (_impl == null)
                 {
