@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -7,91 +7,62 @@ using System.Text.Json.Serialization;
 namespace DataDog.Lambda.DotNet
 {
     /// <summary>
-    /// All the information for a custom Datadog distribution metric.
+    /// A custom AWS Lambda DataDog metric.
     /// </summary>
     public class CustomMetric
     {
-        private string _name;
-        private double _value;
-        private IDictionary<string, object> _tags;
-        private DateTimeOffset _time;
-
         /// <summary>
-        /// Create a custom distribution metric
+        /// Initializes a new instance of the <see cref="CustomMetric"/> class.
         /// </summary>
-        /// <param name="name">The name assigned to the metric</param>
-        /// <param name="value">The value of the metric</param>
-        /// <param name="tags">A map of tags(if any) that you want to assign to the metric</param>
-        public CustomMetric(string name, double value, IDictionary<string, object> tags) : this(name, value, tags, DateTimeOffset.UtcNow)
+        /// <param name="metric">Metric name.</param>
+        /// <param name="value">Metric value.</param>
+        /// <param name="tags">Metric tags.</param>
+        /// <param name="eventTime">The event time.</param>
+        public CustomMetric(string metric, double value, IDictionary<string, string> tags, DateTimeOffset eventTime)
         {
-        }
-
-        /// <summary>
-        /// Create a custom distribution metric with custom a custom time
-        /// </summary>
-        /// <param name="name">The name assigned to the metric</param>
-        /// <param name="value">The value of the metric</param>
-        /// <param name="tags">A map of tags(if any) that you want to assign to the metric</param>
-        /// <param name="time">The time that you want to give to the metric</param>
-        public CustomMetric(string name, double value, IDictionary<string, object> tags, DateTimeOffset time)
-        {
-            _name = name;
-            _value = value;
-            _tags = tags;
-            _time = time;
-        }
-
-        /// <summary>
-        /// Create a JSON string representing the distribution metric
-        /// </summary>
-        /// <returns>the Metric's JSON representation</returns>
-        public string ToJson()
-        {
-            PersistedCustomMetric pcm = new PersistedCustomMetric(_name, _value, _tags, _time);
-            return pcm.ToJsonString();
-        }
-
-        /// <summary>
-        /// Write writes the CustomMetric to Datadog
-        /// </summary>
-        public void Write()
-        {
-            MetricWriter writer = MetricWriter.GetMetricWriterImpl();
-            writer.Write(this);
-        }
-    }
-
-    public class PersistedCustomMetric
-    {
-        public PersistedCustomMetric(string m, double v, IDictionary<string, object> t, DateTimeOffset e)
-        {
-            Metric = m;
-            Value = v;
+            Metric = metric;
+            Value = value;
 
             // First we need to turn the tags into an array of colon-delimited strings
             IEnumerable<string> tagsList = null;
 
-            if (t != null)
+            if (tags != null)
             {
-                tagsList = t.Select((kvp) => $"{kvp.Key}:{kvp.Value}");
+                tagsList = tags.Select((kvp) => $"{kvp.Key}:{kvp.Value}");
             }
 
             Tags = tagsList;
-            EventTime = e.ToUnixTimeSeconds();
+            EventTime = eventTime.ToUnixTimeSeconds();
         }
 
+        /// <summary>
+        /// Gets the metric name.
+        /// </summary>
         [JsonPropertyName("m")]
         public string Metric { get; }
 
+        /// <summary>
+        /// Gets the metric value.
+        /// </summary>
         [JsonPropertyName("v")]
         public double Value { get; }
 
+        /// <summary>
+        /// Gets the tags.
+        /// </summary>
         [JsonPropertyName("t")]
         public IEnumerable<string> Tags { get; }
 
+        /// <summary>
+        /// Gets the event date/time in epoch (Unix timestamp).
+        /// </summary>
         [JsonPropertyName("e")]
         public long EventTime { get; }
 
+        /// <summary>
+        /// Generate JSON string.
+        /// </summary>
+        /// <returns>JSON string.</returns>
         public string ToJsonString()
         {
             return JsonSerializer.Serialize(this);

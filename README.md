@@ -2,13 +2,9 @@
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/vornet/datadog-lambda-dotnet/blob/main/LICENSE)
 ![](https://github.com/dotnet/datadog-lambda-dotnet/workflows/Test%20on%20Master%20branch/badge.svg)
-![NuGet](https://img.shields.io/nuget/v/DataDog.Lambda.Dotnet)
+![NuGet](https://img.shields.io/nuget/v/Vornet.DataDog.Lambda.Dotnet)
 
-The unofficial Datadog Lambda .NET Client Library for .NET Standard 2.0 enables [enhanced lambda metrics](https://docs.datadoghq.com/integrations/amazon_lambda/?tab=awsconsole#real-time-enhanced-lambda-metrics) 
-and [distributed tracing](https://docs.datadoghq.com/integrations/amazon_lambda/?tab=awsconsole#tracing-with-datadog-apm) 
-between serverful and serverless environments, as well as letting you send 
-[custom metrics](https://docs.datadoghq.com/integrations/amazon_lambda/?tab=awsconsole#custom-metrics) 
-to the Datadog API.  It's a direct port of [datadog-lambda-java](https://github.com/DataDog/datadog-lambda-java)
+The unofficial Datadog Lambda .NET Client Library for .NET Standard 2.0 enables [enhanced lambda metrics](https://docs.datadoghq.com/integrations/amazon_lambda/?tab=awsconsole#real-time-enhanced-lambda-metrics) and [distributed tracing](https://docs.datadoghq.com/integrations/amazon_lambda/?tab=awsconsole#tracing-with-datadog-apm) between serverful and serverless environments, as well as letting you send [custom metrics](https://docs.datadoghq.com/integrations/amazon_lambda/?tab=awsconsole#custom-metrics) to the Datadog API.  It's a direct port of [datadog-lambda-java](https://github.com/DataDog/datadog-lambda-java)
 
 ## Installation
 

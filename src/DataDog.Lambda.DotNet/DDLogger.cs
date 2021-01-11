@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
@@ -6,64 +5,53 @@ using Amazon.Lambda.Core;
 
 namespace DataDog.Lambda.DotNet
 {
-    public class DDLogger
+    /// <summary>
+    /// Implementation of IDDLogger that logs to DataDog.
+    /// </summary>
+    internal class DDLogger : IDDLogger
     {
-        public enum level
-        {
-            DEBUG,
-            ERROR
-        }
-
-        private static level? _gLevel;
         private static ILambdaLogger _lambdaLogger;
-        private level _lLevel;
+        private LoggingLevel _level;
 
-        public static DDLogger GetLoggerImpl(ILambdaLogger lambdaLogger)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DDLogger"/> class.
+        /// </summary>
+        /// <param name="lambdaLogger">AWS Lmabda logger.</param>
+        /// <param name="level">logging level.</param>
+        internal DDLogger(ILambdaLogger lambdaLogger, LoggingLevel level)
         {
             _lambdaLogger = lambdaLogger;
-
-            if (_gLevel != null) return new DDLogger();
-
-            string env_level = Environment.GetEnvironmentVariable("DD_LOG_LEVEL");
-            if (env_level == null) env_level = level.ERROR.ToString();
-
-            if (env_level.ToUpper() == level.DEBUG.ToString())
-            {
-                _gLevel = level.DEBUG;
-            }
-            else
-            {
-                _gLevel = level.ERROR;
-            }
-
-            return new DDLogger();
+            _level = level;
         }
 
-        private DDLogger()
+        /// <inheritdoc/>
+        public void Debug(string message, params string[] tags)
         {
-            _lLevel = _gLevel.Value;
-        }
-
-        public void Debug(string logMessage, params object[] args)
-        {
-            if (_lLevel == level.DEBUG)
+            if (_level == LoggingLevel.Debug)
             {
-                DoLog(level.DEBUG, logMessage, args);
+                DoLog(LoggingLevel.Debug, message, tags);
             }
         }
 
-        public void Error(string logMessage, params object[] args)
+        /// <inheritdoc/>
+        public void Error(string message, params string[] tags)
         {
-            DoLog(level.ERROR, logMessage, args);
+            DoLog(LoggingLevel.Error, message, tags);
         }
 
-        private void DoLog(level l, string logMessage, object[] args)
+        /// <inheritdoc/>
+        public void SetLevel(LoggingLevel level)
+        {
+            _level = level;
+        }
+
+        private void DoLog(LoggingLevel level, string message, string[] tags)
         {
             StringBuilder argsSB = new StringBuilder("datadog: ");
-            argsSB.Append(logMessage);
-            if (args != null)
+            argsSB.Append(message);
+            if (tags != null)
             {
-                foreach(object a in args)
+                foreach (object a in tags)
                 {
                     argsSB.Append(" ");
                     argsSB.Append(a);
@@ -71,15 +59,10 @@ namespace DataDog.Lambda.DotNet
             }
 
             Dictionary<string, string> structuredLog = new Dictionary<string, string>();
-            structuredLog.Add("level", l.ToString());
+            structuredLog.Add("level", level.ToString());
             structuredLog.Add("message", argsSB.ToString());
 
             _lambdaLogger.LogLine(JsonSerializer.Serialize(structuredLog));
-        }
-
-        public void SetLevel(level l)
-        {
-            _lLevel = l;
         }
     }
 }

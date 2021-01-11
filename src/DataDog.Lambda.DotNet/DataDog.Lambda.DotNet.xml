@@ -1,0 +1,498 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>DataDog.Lambda.DotNet</name>
+    </assembly>
+    <members>
+        <member name="T:DataDog.Lambda.DotNet.ColdStartFetcher">
+            <summary>
+            Get the cold start status.
+            </summary>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.ColdStartFetcher.GetColdStart(DataDog.Lambda.DotNet.IDDLogger,Amazon.Lambda.Core.ILambdaContext)">
+            <summary>
+            Gets the cold_start status. The very first request to be made against this Lambda should be considered cold.  All others are warm.
+            </summary>
+            <param name="logger">The DD logger.</param>
+            <param name="context">The AWS Lambda context.</param>
+            <returns>true on the very first invocation, false otherwise.</returns>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.ColdStartFetcher.ResetColdStart">
+            <summary>
+            Resets cold start.
+            </summary>
+        </member>
+        <member name="T:DataDog.Lambda.DotNet.CustomMetric">
+            <summary>
+            A custom AWS Lambda DataDog metric.
+            </summary>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.CustomMetric.#ctor(System.String,System.Double,System.Collections.Generic.IDictionary{System.String,System.String},System.DateTimeOffset)">
+            <summary>
+            Initializes a new instance of the <see cref="T:DataDog.Lambda.DotNet.CustomMetric"/> class.
+            </summary>
+            <param name="metric">Metric name.</param>
+            <param name="value">Metric value.</param>
+            <param name="tags">Metric tags.</param>
+            <param name="eventTime">The event time.</param>
+        </member>
+        <member name="P:DataDog.Lambda.DotNet.CustomMetric.Metric">
+            <summary>
+            Gets the metric name.
+            </summary>
+        </member>
+        <member name="P:DataDog.Lambda.DotNet.CustomMetric.Value">
+            <summary>
+            Gets the metric value.
+            </summary>
+        </member>
+        <member name="P:DataDog.Lambda.DotNet.CustomMetric.Tags">
+            <summary>
+            Gets the tags.
+            </summary>
+        </member>
+        <member name="P:DataDog.Lambda.DotNet.CustomMetric.EventTime">
+            <summary>
+            Gets the event date/time in epoch (Unix timestamp).
+            </summary>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.CustomMetric.ToJsonString">
+            <summary>
+            Generate JSON string.
+            </summary>
+            <returns>JSON string.</returns>
+        </member>
+        <member name="T:DataDog.Lambda.DotNet.DDLambda">
+            <summary>
+            An implementation of both enchanced metrics and X-ray tracking for AWS Lambda.
+            </summary>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.DDLambda.#ctor(Amazon.Lambda.Core.ILambdaContext,DataDog.Lambda.DotNet.IDDLoggerFactory)">
+            <summary>
+            Initializes a new instance of the <see cref="T:DataDog.Lambda.DotNet.DDLambda"/> class with Lambda context and logger.
+            </summary>
+            <param name="context">Enhanced Metrics pulls information from the Lambda context.</param>
+            <param name="loggerFactory">Logger factory.</param>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.DDLambda.#ctor(Amazon.Lambda.Core.ILambdaContext,DataDog.Lambda.DotNet.IDDLogger,DataDog.Lambda.DotNet.IMetricWriter)">
+            <summary>
+            Initializes a new instance of the <see cref="T:DataDog.Lambda.DotNet.DDLambda"/> class with Lambda context and logger.
+            </summary>
+            <param name="context">Enhanced Metrics pulls information from the Lambda context.</param>
+            <param name="logger">DD logger.</param>
+            <param name="metricWriter">Metrics writer.</param>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.DDLambda.#ctor(Amazon.Lambda.Core.ILambdaContext,Amazon.Lambda.APIGatewayEvents.APIGatewayProxyRequest)">
+            <summary>
+            Initializes a new instance of the <see cref="T:DataDog.Lambda.DotNet.DDLambda"/> class with an API Gateway proxy request.
+            </summary>
+            <param name="req">Your Datadog trace headers are pulled from the request and sent to XRay for consumption by the Datadog Xray Crawler.</param>
+            <param name="context">Enhanced Metrics pulls information from the Lambda context.</param>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.DDLambda.#ctor(Amazon.Lambda.Core.ILambdaContext,DataDog.Lambda.DotNet.IHeaderable)">
+            <summary>
+            Initializes a new instance of the <see cref="T:DataDog.Lambda.DotNet.DDLambda"/> class.
+            Create a trace-enabled DDLambda instrumenter given a custom request object.
+            <remarks>Please note that your custom request object MUST implement Headerable.</remarks>
+            </summary>
+            <param name="req">A custom request object that implements Headerable. Datadog trace headers are pulled from this request object.</param>
+            <param name="context">Enhanced Metrics pulls information from the Lambda context.</param>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.DDLambda.#ctor(Amazon.Lambda.Core.ILambdaContext,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:DataDog.Lambda.DotNet.DDLambda"/> class with an X-Ray trace information.
+            </summary>
+            <param name="context">Enhanced Metrics pulls information from the Lambda context.</param>
+            <param name="xrayTraceInfo">This would normally be the contents of the "_X_AMZN_TRACE_ID" env var.</param>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.DDLambda.SendCustom(System.String,System.Double,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <inheritdoc/>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.DDLambda.SendCustom(System.String,System.Double,System.Collections.Generic.Dictionary{System.String,System.String},System.DateTimeOffset)">
+            <inheritdoc/>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.DDLambda.IncrementError">
+            <inheritdoc/>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.DDLambda.AddTraceHeaders(System.Net.Http.HttpRequestMessage@)">
+            <inheritdoc/>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.DDLambda.AddTraceHeaders(System.Net.Http.HttpClient@)">
+            <summary>
+            Add Datadog trace headers to the passed in HttpClient's default headers.
+            </summary>
+            <param name="httpClient">HTTP client to decorate.</param>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.DDLambda.GetTraceContext">
+            <summary>
+            Get the trace context for trace/log correlation. Inject this into your logs in order to correlate logs with traces.
+            </summary>
+            <returns>a map of the current trace context.</returns>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.DDLambda.GetTraceContextString">
+            <summary>
+            Get the trace context in string form. Inject this into your logs in order to correlate logs with traces.
+            </summary>
+            <returns>a string representation of the current trace context.</returns>
+        </member>
+        <member name="T:DataDog.Lambda.DotNet.DDLogger">
+            <summary>
+            Implementation of IDDLogger that logs to DataDog.
+            </summary>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.DDLogger.#ctor(Amazon.Lambda.Core.ILambdaLogger,DataDog.Lambda.DotNet.LoggingLevel)">
+            <summary>
+            Initializes a new instance of the <see cref="T:DataDog.Lambda.DotNet.DDLogger"/> class.
+            </summary>
+            <param name="lambdaLogger">AWS Lmabda logger.</param>
+            <param name="level">logging level.</param>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.DDLogger.Debug(System.String,System.String[])">
+            <inheritdoc/>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.DDLogger.Error(System.String,System.String[])">
+            <inheritdoc/>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.DDLogger.SetLevel(DataDog.Lambda.DotNet.LoggingLevel)">
+            <inheritdoc/>
+        </member>
+        <member name="T:DataDog.Lambda.DotNet.DDLoggerFactory">
+            <summary>
+            Create a new instance of the DD logger with optional enviornment configuration.
+            </summary>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.DDLoggerFactory.#ctor(Amazon.Lambda.Core.ILambdaLogger,DataDog.Lambda.DotNet.LoggingLevel)">
+            <summary>
+            Initializes a new instance of the <see cref="T:DataDog.Lambda.DotNet.DDLoggerFactory"/> class.
+            </summary>
+            <param name="lambdaLogger">AWS Lambda logger.</param>
+            <param name="level">Optional logging level.</param>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.DDLoggerFactory.GetLogger">
+            <summary>
+            Get a new instance of the logger.
+            </summary>
+            <returns>logger.</returns>
+        </member>
+        <member name="T:DataDog.Lambda.DotNet.DDTraceContext">
+            <summary>
+            Datadog trace context.
+            </summary>
+        </member>
+        <member name="F:DataDog.Lambda.DotNet.DDTraceContext.DdTraceKey">
+            <summary>
+            DataDog trace key.
+            </summary>
+        </member>
+        <member name="F:DataDog.Lambda.DotNet.DDTraceContext.DdParentKey">
+            <summary>
+            DataDog parent key.
+            </summary>
+        </member>
+        <member name="F:DataDog.Lambda.DotNet.DDTraceContext.DdSamplingKey">
+            <summary>
+            DataDog sampling key.
+            </summary>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.DDTraceContext.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:DataDog.Lambda.DotNet.DDTraceContext"/> class.
+            </summary>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.DDTraceContext.#ctor(DataDog.Lambda.DotNet.IDDLogger,System.Collections.Generic.IDictionary{System.String,System.String})">
+            <summary>
+            Initializes a new instance of the <see cref="T:DataDog.Lambda.DotNet.DDTraceContext"/> class.
+            </summary>
+            <param name="logger">DD logger.</param>
+            <param name="headers">dictionary of headers.</param>
+        </member>
+        <member name="P:DataDog.Lambda.DotNet.DDTraceContext.TraceId">
+            <summary>
+            Gets or sets trace id.
+            </summary>
+        </member>
+        <member name="P:DataDog.Lambda.DotNet.DDTraceContext.ParentId">
+            <summary>
+            Gets or sets parent id.
+            </summary>
+        </member>
+        <member name="P:DataDog.Lambda.DotNet.DDTraceContext.SamplingPriority">
+            <summary>
+            Gets or sets sampling priority.
+            </summary>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.DDTraceContext.ToJsonMap">
+            <summary>
+            Convert to a JSON map.
+            </summary>
+            <returns>JSON map.</returns>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.DDTraceContext.GetKeyValues">
+            <summary>
+            Get key/value pairs.
+            </summary>
+            <returns>Dictionary of key/value pairs.</returns>
+        </member>
+        <member name="T:DataDog.Lambda.DotNet.IDDLambdaMetricsSender">
+            <summary>
+            Implementations of this should report AWS Lambda metrics to DataDog.
+            </summary>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.IDDLambdaMetricsSender.IncrementError">
+            <summary>
+            Increments the aws.lambda.enhanced.error metric in Datadog.
+            </summary>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.IDDLambdaMetricsSender.SendCustom(System.String,System.Double,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            Report enchanced custom metrics to DataDog.
+            </summary>
+            <param name="name">Name of the metric.</param>
+            <param name="value">Value of the metric.</param>
+            <param name="tags">Tags for the metric.</param>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.IDDLambdaMetricsSender.SendCustom(System.String,System.Double,System.Collections.Generic.Dictionary{System.String,System.String},System.DateTimeOffset)">
+            <summary>
+            Report enchanced custom metrics to DataDog with a date.
+            </summary>
+            <param name="name">Name of the metric.</param>
+            <param name="value">Value of the metric.</param>
+            <param name="tags">Tags for the metric.</param>
+            <param name="date">When the event happened.</param>
+        </member>
+        <member name="T:DataDog.Lambda.DotNet.IDDLambdaXrayTracer">
+            <summary>
+            Implementations should generate AWS X-Ray trace context for downstream requests.
+            </summary>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.IDDLambdaXrayTracer.AddTraceHeaders(System.Net.Http.HttpClient@)">
+            <summary>
+            Add trace headers to the HttpClient's default headers.
+            </summary>
+            <param name="httpClient">HTTP client.</param>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.IDDLambdaXrayTracer.AddTraceHeaders(System.Net.Http.HttpRequestMessage@)">
+            <summary>
+            Add trace headers to the HttpRequestMessage headers.
+            </summary>
+            <param name="httpRequestMessage">HTTP requeset message.</param>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.IDDLambdaXrayTracer.GetTraceContext">
+            <summary>
+            Get the trace context as a dictionary.
+            </summary>
+            <returns>dictionary of headers with trace context.</returns>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.IDDLambdaXrayTracer.GetTraceContextString">
+            <summary>
+            Get the trace context as a string.
+            </summary>
+            <returns>trace context.</returns>
+        </member>
+        <member name="T:DataDog.Lambda.DotNet.LoggingLevel">
+            <summary>
+            Logging level.
+            </summary>
+        </member>
+        <member name="F:DataDog.Lambda.DotNet.LoggingLevel.Debug">
+            <summary>
+            Debug or lower.
+            </summary>
+        </member>
+        <member name="F:DataDog.Lambda.DotNet.LoggingLevel.Error">
+            <summary>
+            Error or lower.
+            </summary>
+        </member>
+        <member name="T:DataDog.Lambda.DotNet.IDDLogger">
+            <summary>
+            Implementations should log to DataDog.
+            </summary>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.IDDLogger.Debug(System.String,System.String[])">
+            <summary>
+            Log a debug level message.
+            </summary>
+            <param name="message">message to log.</param>
+            <param name="tags">tags to include.</param>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.IDDLogger.Error(System.String,System.String[])">
+            <summary>
+            Log a error level message.
+            </summary>
+            <param name="message">message to log.</param>
+            <param name="tags">tags to include.</param>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.IDDLogger.SetLevel(DataDog.Lambda.DotNet.LoggingLevel)">
+            <summary>
+            Set the log level.
+            </summary>
+            <param name="level">Log level.</param>
+        </member>
+        <member name="T:DataDog.Lambda.DotNet.IDDLoggerFactory">
+            <summary>
+            Implementation should return a DD logger.
+            </summary>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.IDDLoggerFactory.GetLogger">
+            <summary>
+            Create a DD logger.
+            </summary>
+            <returns>DD logger.</returns>
+        </member>
+        <member name="T:DataDog.Lambda.DotNet.IHeaderable">
+            <summary>
+            Implementation should provider headers.
+            <remarks>
+            Headerable, when combined with the correct API Gateway Mapping Template
+            (including the default application/JSON and application/x-www-form-urlencoded templates)
+            allow Lambda to write the HTTP Request Headers to your custom metric.
+            </remarks>
+            </summary>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.IHeaderable.GetHeaders">
+            <summary>
+            Get headers.
+            </summary>
+            <returns>headers.</returns>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.IHeaderable.SetHeaders(System.Collections.Generic.IDictionary{System.String,System.String})">
+            <summary>
+            Set headers.
+            </summary>
+            <param name="headers">headers.</param>
+        </member>
+        <member name="T:DataDog.Lambda.DotNet.IMetricWriter">
+            <summary>
+            Implementation should write metrics.
+            </summary>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.IMetricWriter.Write(DataDog.Lambda.DotNet.CustomMetric)">
+            <summary>
+            Write custom metric.
+            </summary>
+            <param name="customMetric">Custom metric.</param>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.IMetricWriter.Flush">
+            <summary>
+            Flush any pending metrics in the buffer.
+            </summary>
+        </member>
+        <member name="T:DataDog.Lambda.DotNet.LambdaLogMetricWriter">
+            <summary>
+            Write metrics through the Lambda logger.
+            </summary>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.LambdaLogMetricWriter.#ctor(Amazon.Lambda.Core.ILambdaLogger)">
+            <summary>
+            Initializes a new instance of the <see cref="T:DataDog.Lambda.DotNet.LambdaLogMetricWriter"/> class.
+            </summary>
+            <param name="lambdaLogger">AWS Lambda logger.</param>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.LambdaLogMetricWriter.Write(DataDog.Lambda.DotNet.CustomMetric)">
+            <inheritdoc/>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.LambdaLogMetricWriter.Flush">
+            <inheritdoc/>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.Models.Xray.XRayTraceContext.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:DataDog.Lambda.DotNet.Models.Xray.XRayTraceContext"/> class with a dummy _X_AMZN_TRACE_ID value rather than reading from env vars.
+            </summary>
+            <param name="traceId">Trace id.</param>
+        </member>
+        <member name="P:DataDog.Lambda.DotNet.Models.Xray.XRayTraceContext.ApmParentId">
+            <summary>
+            Gets the APM parent id.
+            </summary>
+        </member>
+        <member name="P:DataDog.Lambda.DotNet.Models.Xray.XRayTraceContext.ApmTraceId">
+            <summary>
+            Gets the APM trace id.
+            </summary>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.Models.Xray.XRayTraceContext.GetKeyValues">
+            <summary>
+            Get tracing as a key/value pair.
+            </summary>
+            <returns>dictionary with tracing headers.</returns>
+        </member>
+        <member name="T:DataDog.Lambda.DotNet.XRayTracer">
+            <summary>
+            Tracing for AWS XRay.
+            </summary>
+        </member>
+        <member name="F:DataDog.Lambda.DotNet.XRayTracer.TraceIdKey">
+            <summary>
+            Trace id key.
+            </summary>
+        </member>
+        <member name="F:DataDog.Lambda.DotNet.XRayTracer.SpanIdKey">
+            <summary>
+            Span id key.
+            </summary>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.XRayTracer.#ctor(DataDog.Lambda.DotNet.IDDLogger)">
+            <summary>
+            Initializes a new instance of the <see cref="T:DataDog.Lambda.DotNet.XRayTracer"/> class.
+            </summary>
+            <param name="logger">DD logger.</param>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.XRayTracer.#ctor(DataDog.Lambda.DotNet.IDDLogger,Amazon.Lambda.APIGatewayEvents.APIGatewayProxyRequest)">
+            <summary>
+            Initializes a new instance of the <see cref="T:DataDog.Lambda.DotNet.XRayTracer"/> class with an API gateway proxy request.
+            </summary>
+            <param name="logger">DD logger.</param>
+            <param name="request">API Gateway proxy requeset.</param>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.XRayTracer.#ctor(DataDog.Lambda.DotNet.IDDLogger,DataDog.Lambda.DotNet.IHeaderable)">
+            <summary>
+            Initializes a new instance of the <see cref="T:DataDog.Lambda.DotNet.XRayTracer"/> class with an IHeaderable.
+            </summary>
+            <param name="logger">DD logger.</param>
+            <param name="headerable">An implementation of headerable.</param>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.XRayTracer.#ctor(DataDog.Lambda.DotNet.IDDLogger,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:DataDog.Lambda.DotNet.XRayTracer"/> class with a dummy _X_AMZN_TRACE_ID value for testing purposes.
+            </summary>
+            <param name="logger">DD logger.</param>
+            <param name="xrayTraceInfo">XRay trace info.</param>
+        </member>
+        <member name="P:DataDog.Lambda.DotNet.XRayTracer.TraceContext">
+            <summary>
+            Gets the trace context.
+            </summary>
+        </member>
+        <member name="P:DataDog.Lambda.DotNet.XRayTracer.XRayContext">
+            <summary>
+            Gets the AWS XRay context.
+            </summary>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.XRayTracer.GetLogCorrelationTraceAndSpanIDsMap">
+            <summary>
+            Gets the log correlation trace and span id map.
+            </summary>
+            <returns>dictionary with trace and span id.</returns>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.XRayTracer.SubmitSegmentAsync">
+            <summary>
+            Submit a segment to AWS XRay.
+            </summary>
+            <returns>true if sucessful, otherwise false.</returns>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.XRayTracer.MakeOutboundHttpTraceHeaders">
+            <summary>
+            Make the outbound HTTP trace headers.
+            </summary>
+            <returns>dictionary of headers.</returns>
+        </member>
+        <member name="M:DataDog.Lambda.DotNet.XRayTracer.PopulateDDContext(System.Collections.Generic.IDictionary{System.String,System.String})">
+            <summary>
+            Populate DD context with headers.
+            </summary>
+            <param name="headers">headers.</param>
+            <returns>DD trace context.</returns>
+        </member>
+    </members>
+</doc>
